@@ -162,6 +162,36 @@ class ResNet(nn.Module):
 
     return x
 
+class Flatten(nn.Module):
+    def forward(self, x):
+        x = x.view(x.size()[0], -1)
+        return x
+class AdaptiveConcatPool2d(nn.Module):
+    def __init__(self, sz=None):
+        super().__init__()
+        sz = sz or (1,1)
+        self.ap = nn.AdaptiveAvgPool2d(sz)
+        self.mp = nn.AdaptiveMaxPool2d(sz)
+    def forward(self, x): return torch.cat([self.mp(x), self.ap(x)], 1)
+
+def load_resnet34():
+    resnet_34 = ResNet(BasicBlock, [3, 4, 6, 3])
+    f = torch.nn.Sequential(*list(resnet_34.children())[:-2])
+    model = nn.Sequential(
+                f,
+                AdaptiveConcatPool2d(),
+                Flatten(),
+                nn.BatchNorm2d(1024, eps=1e-05, momentum=0.1, affine=True),
+                nn.Dropout2d(p=0.5),
+                nn.Linear(in_features=1024, out_features=512, bias=True),
+                nn.ReLU(inplace=True),
+                nn.BatchNorm2d(512, eps=1e-05, momentum=0.1, affine=True),
+                nn.Dropout2d(p=0.5),
+                nn.Linear(in_features=512, out_features=228, bias=True),
+                nn.Sigmoid(),
+            )
+    return model
+
 
 def resnet18(pretrained=False):
   """Constructs a ResNet-18 model.
@@ -180,8 +210,9 @@ def resnet34(pretrained=False):
     pretrained (bool): If True, returns a model pre-trained on ImageNet
   """
   model = ResNet(BasicBlock, [3, 4, 6, 3])
+  model_url = "/Users/krishna.singh/Downloads/ifashion_r34_pytorch.pt"
   if pretrained:
-    model.load_state_dict(model_zoo.load_url(model_urls['resnet34']))
+    model.load_state_dict(model_url)
   return model
 
 
@@ -219,15 +250,16 @@ def resnet152(pretrained=False):
 
 class resnet(_fasterRCNN):
   def __init__(self, classes, num_layers=101, pretrained=False, class_agnostic=False):
-    self.model_path = 'data/pretrained_model/resnet101_caffe.pth'
-    self.dout_base_model = 1024
+    self.model_path = 'data/pretrained_model/resnet34.pt'
+    self.dout_base_model = 256 # Since using resent34
     self.pretrained = pretrained
     self.class_agnostic = class_agnostic
 
     _fasterRCNN.__init__(self, classes, class_agnostic)
 
   def _init_modules(self):
-    resnet = resnet101()
+    resnet = load_resnet34() # change to according to the architechture
+    # change this according to your architechture
 
     if self.pretrained == True:
       print("Loading pretrained weights from %s" %(self.model_path))
@@ -235,16 +267,17 @@ class resnet(_fasterRCNN):
       resnet.load_state_dict({k:v for k,v in state_dict.items() if k in resnet.state_dict()})
 
     # Build resnet.
-    self.RCNN_base = nn.Sequential(resnet.conv1, resnet.bn1,resnet.relu,
-      resnet.maxpool,resnet.layer1,resnet.layer2,resnet.layer3)
+    nn_el = list(resnet.children())
+    self.RCNN_base = nn.Sequential(nn_el[0][0], nn_el[0][1], nn_el[0][2],
+                                   nn_el[0][3], nn_el[0][4], nn_el[0][5], nn_el[0][6])
 
-    self.RCNN_top = nn.Sequential(resnet.layer4)
+    self.RCNN_top = nn.Sequential(nn_el[0][7])
 
-    self.RCNN_cls_score = nn.Linear(2048, self.n_classes)
+    self.RCNN_cls_score = nn.Linear(512, self.n_classes)
     if self.class_agnostic:
-      self.RCNN_bbox_pred = nn.Linear(2048, 4)
+      self.RCNN_bbox_pred = nn.Linear(512, 4)
     else:
-      self.RCNN_bbox_pred = nn.Linear(2048, 4 * self.n_classes)
+      self.RCNN_bbox_pred = nn.Linear(512, 4 * self.n_classes)
 
     # Fix blocks
     for p in self.RCNN_base[0].parameters(): p.requires_grad=False

@@ -42,10 +42,8 @@ class _fasterRCNN(nn.Module):
         im_info = im_info.data
         gt_boxes = gt_boxes.data
         num_boxes = num_boxes.data
-
         # feed image data to base model to obtain base feature map
         base_feat = self.RCNN_base(im_data)
-
         # feed base feature map tp RPN to obtain rois
         rois, rpn_loss_cls, rpn_loss_bbox = self.RCNN_rpn(base_feat, im_info, gt_boxes, num_boxes)
 
@@ -101,6 +99,7 @@ class _fasterRCNN(nn.Module):
         RCNN_loss_bbox = 0
 
         if self.training:
+
             # classification loss
             RCNN_loss_cls = F.cross_entropy(cls_score, rois_label)
 

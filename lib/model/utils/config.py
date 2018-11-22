@@ -219,7 +219,7 @@ __C.RESNET.MAX_POOL = False
 
 # Number of fixed blocks during training, by default the first of all 4 blocks is fixed
 # Range: 0 (none) to 3 (all)
-__C.RESNET.FIXED_BLOCKS = 1
+__C.RESNET.FIXED_BLOCKS = 3
 
 #
 # MobileNet options
@@ -370,6 +370,7 @@ def _merge_a_into_b(a, b):
 def cfg_from_file(filename):
   """Load a config file and merge it into the default options."""
   import yaml
+  print("filename", filename)
   with open(filename, 'r') as f:
     yaml_cfg = edict(yaml.load(f))
 

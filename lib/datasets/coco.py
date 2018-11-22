@@ -211,13 +211,6 @@ class coco(imdb):
       self.roidb.append(entry)
     self._image_index = self._image_index * 2
 
-  def _get_box_file(self, index):
-    # first 14 chars / first 22 chars / all chars + .mat
-    # COCO_val2014_0/COCO_val2014_000000447/COCO_val2014_000000447991.mat
-    file_name = ('COCO_' + self._data_name +
-                 '_' + str(index).zfill(12) + '.mat')
-    return osp.join(file_name[:14], file_name[:22], file_name)
-
   def _print_detection_eval_metrics(self, coco_eval):
     IoU_lo_thresh = 0.5
     IoU_hi_thresh = 0.95

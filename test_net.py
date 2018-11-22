@@ -142,6 +142,7 @@ if __name__ == '__main__':
   print('{:d} roidb entries'.format(len(roidb)))
 
   input_dir = args.load_dir + "/" + args.net + "/" + args.dataset
+  print("input_dir", input_dir)
   if not os.path.exists(input_dir):
     raise Exception('There is no input directory for loading network from ' + input_dir)
   load_name = os.path.join(input_dir,
